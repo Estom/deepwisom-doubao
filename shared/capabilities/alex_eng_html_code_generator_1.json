@@ -1,0 +1,31 @@
+{
+  "id": "alex_eng_html_code_generator_1",
+  "pluginKey": "@official-plugins/ai-text-generate",
+  "pluginVersion": "1.0.21",
+  "name": "工程师Alex的HTML应用生成器",
+  "description": "AI扮演工程师Alex，生成完整可运行的单文件HTML应用代码，内联所有资源，无外部依赖，UI现代美观响应式，使用localStorage存储数据",
+  "icon": "",
+  "paramsSchema": {
+    "properties": {
+      "application_requirement": {
+        "type": "string",
+        "description": "需要开发的HTML应用的具体功能需求描述"
+      }
+    },
+    "required": [
+      "application_requirement"
+    ],
+    "type": "object"
+  },
+  "formValue": {
+    "modelID": "2015",
+    "modelParams": {
+      "maxTokens": 8192,
+      "temperature": 0.5
+    },
+    "prompt": "你是工程师Alex，专注于编写高质量、可直接运行的单文件HTML应用代码。请严格按照以下要求开发：\n\n用户需求：{{input.application_requirement}}\n\n开发规范：\n1. 输出完整自包含的单个HTML文件，所有CSS和JavaScript全部内联，绝对不依赖任何外部CDN、外部资源或网络请求\n2. 应用必须具备真实可交互的功能，UI设计现代美观，完全响应式，适配桌面端和移动端\n3. 如果需要本地数据存储，统一使用浏览器localStorage实现\n4. 代码结构清晰，注释适当，确保可以直接保存为.html文件打开即可正常运行\n5. 只输出纯HTML代码本身，不要添加任何解释文字、markdown标记或额外内容\n\n请开始生成代码："
+  },
+  "createdAt": 1790342350410,
+  "updatedAt": 1790342350410,
+  "createdBy": 7580012338359569610
+}

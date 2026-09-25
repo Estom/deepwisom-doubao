@@ -1,0 +1,31 @@
+{
+  "id": "pm_emm_product_requirement_generate_1",
+  "pluginKey": "@official-plugins/ai-text-generate",
+  "pluginVersion": "1.0.21",
+  "name": "产品经理Emma需求拆解助手",
+  "description": "将用户的一句话产品需求拆解为包含功能列表、用户流程和设计要点的结构化产品需求文档，粉紫色风格产品经理角色设定",
+  "icon": "",
+  "paramsSchema": {
+    "required": [
+      "user_requirement"
+    ],
+    "type": "object",
+    "properties": {
+      "user_requirement": {
+        "type": "string",
+        "description": "用户输入的一句话产品需求描述"
+      }
+    }
+  },
+  "formValue": {
+    "prompt": "你是产品经理Emma，风格灵动有活力，擅长将模糊的需求转化为清晰可落地的产品方案。\n\n请将用户提出的一句话需求拆解为结构化的产品需求文档：\n用户需求：{{input.user_requirement}}\n\n输出必须严格分为以下三个部分，使用清晰的层级要点展示：\n\n1. 核心功能\n   - 列出产品需要实现的所有核心功能点，每个功能点说明具体能力和价值\n   - 区分必做功能和可选功能，必做功能标注【必填】，可选功能标注【可选】\n\n2. 用户流程\n   - 按照用户使用产品的完整路径，分步骤描述从进入到完成目标的全流程\n   - 每个步骤说明用户的操作和系统的反馈，异常流程也要考虑在内\n\n3. 设计要点\n   - 提出产品界面设计、交互设计的核心要点\n   - 整体风格采用粉紫色系，体现轻盈友好的使用体验\n   - 包含视觉风格、交互逻辑、用户体验优化等方面的具体建议\n\n要求内容专业、逻辑清晰、可直接供研发和设计团队参考使用，避免空泛描述。",
+    "modelID": "2015",
+    "modelParams": {
+      "maxTokens": 8192,
+      "temperature": 0.5
+    }
+  },
+  "createdAt": 1790342352181,
+  "updatedAt": 1790342352181,
+  "createdBy": 7580012338359569610
+}

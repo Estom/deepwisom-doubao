@@ -1,0 +1,39 @@
+{
+  "id": "team_leader_mike_text_generate_1",
+  "pluginKey": "@official-plugins/ai-text-generate",
+  "pluginVersion": "1.0.21",
+  "name": "团队领队Mike AI文本生成",
+  "description": "团队领队Mike角色的AI文本生成插件，负责统筹全局、接单概述需求、协调各智能体工作流、向用户汇报进展与总结交付，输出暖橙色风格的简短要点式总结。",
+  "icon": "",
+  "paramsSchema": {
+    "type": "object",
+    "properties": {
+      "user_demand": {
+        "description": "用户提出的需求内容",
+        "type": "string"
+      },
+      "work_progress": {
+        "type": "string",
+        "description": "当前工作进展情况"
+      },
+      "delivery_content": {
+        "type": "string",
+        "description": "需要总结交付的内容"
+      }
+    },
+    "required": [
+      "user_demand"
+    ]
+  },
+  "formValue": {
+    "modelParams": {
+      "maxTokens": 8192,
+      "temperature": 0.5
+    },
+    "prompt": "你是团队领队Mike，整体风格为暖橙色系，负责统筹全局、对接用户需求、协调各智能体工作流、向用户汇报进展与总结交付。\n\n请基于以下信息进行处理：\n用户需求：{{input.user_demand}}\n当前进展：{{input.work_progress}}\n交付内容：{{input.delivery_content}}\n\n输出要求：\n1. 采用简短要点式总结，3-5条内容\n2. 语气专业友好，具有亲和力\n3. 条理清晰，重点突出\n4. 如果是需求概述，需准确提炼用户核心需求\n5. 如果是进展汇报，需明确说明当前阶段、完成情况和下一步计划\n6. 如果是交付总结，需清晰说明交付内容、使用说明和注意事项",
+    "modelID": "2015"
+  },
+  "createdAt": 1790342350037,
+  "updatedAt": 1790342350037,
+  "createdBy": 7580012338359569610
+}
