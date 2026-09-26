@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AtomStudio 大模型调用与多智能体编排架构</title>
+</head>
+<body style="margin:0;padding:0;background:#0b0e1a;">
+<div style="width:100%;box-sizing:border-box;background:#0b0e1a;color:#e5e7eb;font-family:'Segoe UI','Microsoft YaHei',sans-serif;padding:18px;border-radius:12px;font-size:14px;line-height:1.5;">
+
+  <div style="text-align:center;margin-bottom:4px;font-size:16px;font-weight:600;color:#f3f4f6;">AtomStudio 大模型调用与多智能体编排架构</div>
+  <div style="text-align:center;font-size:12px;color:#9ca3af;margin-bottom:18px;">（基于源码绘制 · 示意）</div>
+
+  <!-- ========== Panel A 分层调用链 ========== -->
+  <div style="font-size:13px;font-weight:600;color:#a5b4fc;margin-bottom:10px;">一、调用分层：前端不接触模型，全部经平台插件</div>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:stretch;margin-bottom:8px;">
+    <div style="flex:3;min-width:280px;display:flex;flex-direction:column;gap:6px;">
+      <div style="border:1px solid #475569;border-radius:10px;padding:10px 12px;background:#111527;">
+        <div style="font-weight:600;color:#fbbf24;">① 页面层 · WorkspacePage</div>
+        <div style="font-size:12px;color:#9ca3af;margin-top:2px;">消息流 / 输入框 / iframe 预览 · 触发 sendMessage</div>
+      </div>
+      <div style="text-align:center;color:#64748b;font-size:14px;">↓ 调用</div>
+      <div style="border:1px solid #6d28d9;border-radius:10px;padding:10px 12px;background:#1a1430;">
+        <div style="font-weight:600;color:#c4b5fd;">② 编排层 · useWorkspace.runPipeline</div>
+        <div style="font-size:12px;color:#a78bfa;margin-top:2px;">硬编码 SOP，顺序触发各 Agent；构造每阶段输入、累积流式输出、落库版本</div>
+      </div>
+      <div style="text-align:center;color:#64748b;font-size:14px;">↓ capabilityClient.load(id).callStream('textGenerate', input)</div>
+      <div style="border:1px solid #1d4ed8;border-radius:10px;padding:10px 12px;background:#0f1a36;">
+        <div style="font-weight:600;color:#93c5fd;">③ 能力客户端 + 运行时插件</div>
+        <div style="font-size:12px;color:#93c5fd;margin-top:2px;">@official-plugins/ai-text-generate 1.0.21 · 平台负责鉴权 / 计费 / 流式传输</div>
+      </div>
+      <div style="text-align:center;color:#64748b;font-size:14px;">↓ 渲染 {{input.xxx}} 模板后请求</div>
+      <div style="border:1px solid #0e7490;border-radius:10px;padding:10px 12px;background:#0c2230;">
+        <div style="font-weight:600;color:#67e8f9;">④ 大模型（modelID 2015）</div>
+        <div style="font-size:12px;color:#67e8f9;margin-top:2px;">temperature 0.5 · maxTokens 8192 · 流式返回 chunk.content</div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:200px;display:flex;align-items:center;">
+      <div style="width:100%;border:1px dashed #65a30d;border-radius:10px;padding:12px;background:#142012;">
+        <div style="font-weight:600;color:#bef264;">存储侧 · scopedStorage</div>
+        <div style="font-size:12px;color:#a3e635;margin-top:6px;">类 localStorage 的键值库，键前缀 atomstudio_：</div>
+        <div style="font-size:12px;color:#d9f99d;margin-top:6px;line-height:1.8;">
+          · users / session<br>
+          · projects_{userId}<br>
+          · messages_{projectId}<br>
+          · tasks_{projectId}<br>
+          · versions_{projectId}
+        </div>
+        <div style="font-size:11px;color:#84cc16;margin-top:8px;">↔ 编排层读写（非真实文件系统）</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== Panel B 流水线时序 ========== -->
+  <div style="font-size:13px;font-weight:600;color:#a5b4fc;margin:20px 0 10px;">二、多智能体流水线：顺序固定，每次模型调用独立无状态</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:stretch;">
+    <div style="flex:1;min-width:110px;border:1px solid #475569;border-radius:9px;padding:8px;background:#111527;text-align:center;">
+      <div style="font-weight:600;">用户</div>
+      <div style="font-size:11px;color:#9ca3af;margin-top:3px;">输入需求文本</div>
+    </div>
+    <div style="display:flex;align-items:center;color:#64748b;">→</div>
+    <div style="flex:1;min-width:110px;border:1px solid rgba(255,138,61,0.4);border-radius:9px;padding:8px;background:#231508;text-align:center;">
+      <div style="font-weight:600;color:#FF8A3D;">Mike 概述</div>
+      <div style="font-size:11px;color:#fdba74;margin-top:3px;">user_demand 等</div>
+    </div>
+    <div style="display:flex;align-items:center;color:#64748b;">→</div>
+    <div style="flex:1;min-width:110px;border:1px solid rgba(232,121,249,0.4);border-radius:9px;padding:8px;background:#221028;text-align:center;">
+      <div style="font-weight:600;color:#E879F9;">Emma 需求</div>
+      <div style="font-size:11px;color:#f0abfc;margin-top:3px;">user_requirement</div>
+    </div>
+    <div style="display:flex;align-items:center;color:#64748b;">→</div>
+    <div style="flex:1;min-width:110px;border:1px solid rgba(96,165,250,0.4);border-radius:9px;padding:8px;background:#0c1830;text-align:center;">
+      <div style="font-weight:600;color:#60A5FA;">Bob 架构</div>
+      <div style="font-size:11px;color:#93c5fd;margin-top:3px;">project_requirement</div>
+    </div>
+    <div style="display:flex;align-items:center;color:#64748b;">→</div>
+    <div style="flex:1;min-width:110px;border:1px solid rgba(59,130,246,0.4);border-radius:9px;padding:8px;background:#0b1630;text-align:center;">
+      <div style="font-weight:600;color:#60a5fa;">Alex 代码</div>
+      <div style="font-size:11px;color:#93c5fd;margin-top:3px;">application_requirement</div>
+    </div>
+    <div style="display:flex;align-items:center;color:#64748b;">→</div>
+    <div style="flex:1;min-width:110px;border:1px solid rgba(255,138,61,0.4);border-radius:9px;padding:8px;background:#231508;text-align:center;">
+      <div style="font-weight:600;color:#FF8A3D;">Mike 总结</div>
+      <div style="font-size:11px;color:#fdba74;margin-top:3px;">delivery_content</div>
+    </div>
+  </div>
+  <div style="font-size:12px;color:#9ca3af;margin-top:8px;">注：Agent 之间无模型级对话，共享上下文由编排层显式传参；David 已定义但未接入此流水线。</div>
+
+  <!-- ========== Panel C 文件读写 ========== -->
+  <div style="font-size:13px;font-weight:600;color:#a5b4fc;margin:20px 0 10px;">三、“读写文件”没有工具调用，由应用代码确定性模拟</div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:220px;border:1px solid rgba(22,163,74,0.4);border-radius:10px;padding:11px;background:#0c1f14;">
+      <div style="font-weight:600;color:#4ade80;">“写文件” · Alex 输出后</div>
+      <div style="font-size:12px;color:#bbf7d0;margin-top:6px;line-height:1.8;">
+        流式文本累积<br>→ stripCodeBlocks 剥离 ```html<br>→ addVersion 存版本快照（scopedStorage）<br>→ currentCode 写入 iframe srcDoc<br>→ Blob 可下载 .html / 复制剪贴板
+      </div>
+    </div>
+    <div style="flex:1;min-width:220px;border:1px solid rgba(37,99,235,0.4);border-radius:10px;padding:11px;background:#0c1830;">
+      <div style="font-weight:600;color:#60a5fa;">“读文件” · 迭代修改时</div>
+      <div style="font-size:12px;color:#bfdbfe;margin-top:6px;line-height:1.8;">
+        取最新版本 currentCode<br>→ 全文内联进 prompt：<br>“当前应用代码如下…请在此基础上修改”<br>→ 模型“看到”文件而非调用工具
+      </div>
+    </div>
+    <div style="flex:1;min-width:220px;border:1px solid rgba(217,119,6,0.4);border-radius:10px;padding:11px;background:#211708;">
+      <div style="font-weight:600;color:#fbbf24;">“回滚” · 版本切换</div>
+      <div style="font-size:12px;color:#fde68a;margin-top:6px;line-height:1.8;">
+        rollbackToVersion<br>→ currentCode / currentVersion<br>指向旧快照<br>→ 预览即时还原
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:16px;border:1px solid #7c3aed;border-radius:10px;padding:11px 13px;background:#1c1233;font-size:13px;color:#ddd6fe;">
+    <b>结论：</b>LLM 仅承担“文本生成器”，提示词在 capability 模板中静态定义、运行时注入上下文；“文件读写”是模型之外的确定性代码（正则清洗 + KV 快照 + iframe 渲染 + Blob 导出），不存在 function-calling 工具循环。
+  </div>
+
+</div>
+</body>
+</html>
