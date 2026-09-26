@@ -25,6 +25,7 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   GitBranch,
   RotateCcw,
 } from 'lucide-react';
@@ -100,6 +101,7 @@ export default function WorkspacePage() {
   const [editName, setEditName] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<IVersion | null>(null);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -119,10 +121,46 @@ export default function WorkspacePage() {
     }
   }, [project, user, authLoading, navigate]);
 
-  // 自动滚动到底部
+  const scrollToBottom = (smooth = false) => {
+    const viewport = messagesEndRef.current?.closest(
+      '[data-radix-scroll-area-viewport]'
+    ) as HTMLElement | null;
+    if (viewport) {
+      viewport.scrollTo({
+        top: viewport.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto',
+      });
+    }
+  };
+
+  // 仅当用户在底部附近时，新消息自动滚到底
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const viewport = messagesEndRef.current?.closest(
+      '[data-radix-scroll-area-viewport]'
+    ) as HTMLElement | null;
+    if (!viewport) return;
+    const nearBottom =
+      viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 120;
+    if (nearBottom) {
+      scrollToBottom(false);
+    }
+    setShowScrollBottom(!nearBottom);
   }, [messages]);
+
+  // 监听用户手动滚动，控制「回到底部」按钮显隐
+  useEffect(() => {
+    const viewport = messagesEndRef.current?.closest(
+      '[data-radix-scroll-area-viewport]'
+    ) as HTMLElement | null;
+    if (!viewport) return;
+    const onScroll = () => {
+      const nearBottom =
+        viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 120;
+      setShowScrollBottom(!nearBottom);
+    };
+    viewport.addEventListener('scroll', onScroll);
+    return () => viewport.removeEventListener('scroll', onScroll);
+  }, []);
 
   // 有新消息自动切到预览/任务
   useEffect(() => {
@@ -138,6 +176,7 @@ export default function WorkspacePage() {
 
     setInputValue('');
     await sendMessage(trimmed);
+    scrollToBottom(true);
   };
 
   const handleMention = (name: string) => {
@@ -335,81 +374,101 @@ export default function WorkspacePage() {
               </div>
 
               {/* 消息流 */}
-              <ScrollArea className="flex-1 px-3">
-                <div className="py-3 space-y-3">
-                  {messages.length === 0 && (
-                    <div className="text-center py-16">
-                      <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center">
-                        <Sparkles className="w-8 h-8 text-violet-400" />
+              <div className="relative flex-1 min-h-0 flex flex-col">
+                <ScrollArea className="flex-1 min-h-0 px-3">
+                  <div className="py-3 space-y-3">
+                    {messages.length === 0 && (
+                      <div className="text-center py-16">
+                        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center">
+                          <Sparkles className="w-8 h-8 text-violet-400" />
+                        </div>
+                        <p className="text-sm font-medium mb-1">开始你的项目</p>
+                        <p className="text-xs text-muted-foreground max-w-[280px] mx-auto">
+                          描述你想创建的应用，多智能体团队会为你分析需求、设计方案并生成代码
+                        </p>
                       </div>
-                      <p className="text-sm font-medium mb-1">开始你的项目</p>
-                      <p className="text-xs text-muted-foreground max-w-[280px] mx-auto">
-                        描述你想创建的应用，多智能体团队会为你分析需求、设计方案并生成代码
-                      </p>
-                    </div>
-                  )}
+                    )}
 
-                  <AnimatePresence initial={false}>
-                    {messages.map((msg) => {
-                      const isUser = msg.role === 'user';
-                      const agent = msg.agentName ? getAgent(msg.agentName as AgentName) : null;
-                      return (
-                        <motion.div
-                          key={msg.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0 }}
-                          transition={{ duration: 0.3 }}
-                          className={`flex gap-2 ${isUser ? 'flex-row-reverse' : ''}`}
-                        >
-                          {!isUser && agent ? (
-                            <AgentAvatar name={agent.name as AgentName} size="sm" />
-                          ) : (
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                              {user?.email.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          <div className={`flex-1 min-w-0 ${isUser ? 'text-right' : ''}`}>
-                            {!isUser && agent && (
-                              <div
-                                className="text-xs font-medium mb-1 flex items-center gap-1"
-                                style={{ color: agent.themeColor }}
-                              >
-                                {agent.name}
-                                <span className="text-muted-foreground text-[10px]">· {agent.role}</span>
+                    <AnimatePresence initial={false}>
+                      {messages.map((msg) => {
+                        const isUser = msg.role === 'user';
+                        const agent = msg.agentName ? getAgent(msg.agentName as AgentName) : null;
+                        return (
+                          <motion.div
+                            key={msg.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className={`flex gap-2 ${isUser ? 'flex-row-reverse' : ''}`}
+                          >
+                            {!isUser && agent ? (
+                              <AgentAvatar name={agent.name as AgentName} size="sm" />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                                {user?.email.charAt(0).toUpperCase()}
                               </div>
                             )}
-                            <div
-                              className={`inline-block px-3 py-2 rounded-2xl text-sm leading-relaxed max-w-full ${
-                                isUser
-                                  ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-tr-sm'
-                                  : 'bg-card/80 border border-border/40 rounded-tl-sm'
-                              }`}
-                            >
-                              {msg.status === 'thinking' || msg.status === 'sending' ? (
-                                <div className="flex items-center gap-1.5 py-1">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce [animation-delay:-0.3s]" />
-                                  <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce [animation-delay:-0.15s]" />
-                                  <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce" />
-                                </div>
-                              ) : msg.role === 'user' ? (
-                                <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                              ) : (
-                                <div className="prose prose-sm dark:prose-invert max-w-none prose-pre:bg-muted/50 prose-pre:border prose-pre:border-border/40 prose-pre:rounded-lg prose-code:text-xs">
-                                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                    {msg.content}
-                                  </ReactMarkdown>
+                            <div className={`flex-1 min-w-0 ${isUser ? 'text-right' : ''}`}>
+                              {!isUser && agent && (
+                                <div
+                                  className="text-xs font-medium mb-1 flex items-center gap-1"
+                                  style={{ color: agent.themeColor }}
+                                >
+                                  {agent.name}
+                                  <span className="text-muted-foreground text-[10px]">· {agent.role}</span>
                                 </div>
                               )}
+                              <div
+                                className={`inline-block px-3 py-2 rounded-2xl text-sm leading-relaxed max-w-full ${
+                                  isUser
+                                    ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-tr-sm'
+                                    : 'bg-card/80 border border-border/40 rounded-tl-sm'
+                                }`}
+                              >
+                                {msg.status === 'thinking' || msg.status === 'sending' ? (
+                                  <div className="flex items-center gap-1.5 py-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce [animation-delay:-0.3s]" />
+                                    <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce [animation-delay:-0.15s]" />
+                                    <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce" />
+                                  </div>
+                                ) : msg.role === 'user' ? (
+                                  <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                                ) : (
+                                  <div className="prose prose-sm dark:prose-invert max-w-none prose-pre:bg-muted/50 prose-pre:border prose-pre:border-border/40 prose-pre:rounded-lg prose-code:text-xs">
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                      {msg.content}
+                                    </ReactMarkdown>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                  </AnimatePresence>
-                  <div ref={messagesEndRef} />
-                </div>
-              </ScrollArea>
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
+                    <div ref={messagesEndRef} />
+                  </div>
+                </ScrollArea>
+                <AnimatePresence>
+                  {showScrollBottom && (
+                    <motion.button
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 8 }}
+                      transition={{ duration: 0.2 }}
+                      onClick={() => {
+                        scrollToBottom(true);
+                        setShowScrollBottom(false);
+                      }}
+                      className="absolute bottom-3 right-4 z-10 h-8 w-8 rounded-full bg-card border border-border/60 shadow text-muted-foreground hover:text-foreground flex items-center justify-center"
+                      aria-label="回到底部"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              </div>
 
               {/* 输入框 */}
               <div className="p-3 border-t border-border/30">
